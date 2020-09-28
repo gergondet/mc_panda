@@ -16,7 +16,7 @@ jobs:
   clang-format:
     runs-on: ubuntu-18.04
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Install clang-format-6.0
       run: |
         sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
@@ -29,14 +29,18 @@ jobs:
   build:
     needs: clang-format
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-18.04]
+        os: [ubuntu-18.04, macos-latest]
+        compiler: [gcc]
+        build-type: [RelWithDebInfo]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: recursive
     - name: Install ROS dependencies
+      if: startsWith(runner.os, 'Linux')
       run: |
         set -x
         set -e
@@ -55,19 +59,27 @@ jobs:
         echo "::set-env name=PATH::${PATH}"
         echo "::set-env name=LD_LIBRARY_PATH::${LD_LIBRARY_PATH}"
     - name: Install mc_rtc
-      run: |
-        set -x
-        set -e
-        sudo apt-get install -y apt-transport-https lsb-release ca-certificates gnupg
-        sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key 892EA6EE273707C6495A6FB6220D644C64666806
-        sudo sh -c 'echo "deb https://dl.bintray.com/gergondet/multi-contact-head $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/multi-contact.list'
-        sudo apt-get update
-        sudo apt-get install -y libmc-rtc-dev mc-rtc-utils python3-mc-rtc ros-${ROS_DISTRO}-mc-rtc-plugin mc-openrtm jvrc-choreonoid libcnoid-dev
+      uses: jrl-umi3218/github-actions/install-dependencies@master
+      with:
+        compiler: ${{ matrix.compiler }}
+        build-type: ${{ matrix.build-type }}
+        ubuntu: |
+          apt: libmc-rtc-dev libcnoid-dev jvrc-choreonoid
+          apt-mirrors:
+            multi-contact:
+              mirror: https://dl.bintray.com/gergondet/multi-contact-head
+              key: 892EA6EE273707C6495A6FB6220D644C64666806
+        macos: |
+          cask: gfortran
+          vcpkg:
+            repo: jrl-umi3218/vcpkg
+            user: ${{ github.actor }}
+            token: ${{ github.token }}
     - name: Build and test
       uses: jrl-umi3218/github-actions/build-cmake-project@master
       with:
-        compiler: gcc
-        build-type: RelWithDebInfo
+        compiler: ${{ matrix.compiler }}
+        build-type: ${{ matrix.build-type }}
     - name: Slack Notification
       if: failure()
       uses: archive/github-actions-slack@master
