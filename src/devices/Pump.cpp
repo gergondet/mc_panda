@@ -2,7 +2,9 @@
 
 #include <mc_rbdyn/Robot.h>
 
-#include <franka/exception.h>
+#ifndef MC_PANDA_WITHOUT_FRANKA
+#  include <franka/exception.h>
+#endif
 
 namespace mc_panda
 {
@@ -28,17 +30,22 @@ Pump * Pump::get(mc_rbdyn::Robot & robot)
 
 mc_rbdyn::DevicePtr Pump::clone() const
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   if(gripper_)
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("Cannot copy a connected Pump");
   }
+#endif
   auto ret = new Pump(parent_, X_p_s_);
+#ifndef MC_PANDA_WITHOUT_FRANKA
   ret->state_ = this->state_;
+#endif
   return mc_rbdyn::DevicePtr(ret);
 }
 
 void Pump::addToLogger(mc_rtc::Logger & logger, const std::string & prefix)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   logger.addLogEntry(prefix + "_status", [this]() { return state_.device_status != Status::disconnected; });
   logger.addLogEntry(prefix + "_device_status", [this]() { return static_cast<StatusInt>(state_.device_status); });
   logger.addLogEntry(prefix + "_actual_power", [this]() { return state_.actual_power; });
@@ -47,10 +54,12 @@ void Pump::addToLogger(mc_rtc::Logger & logger, const std::string & prefix)
   logger.addLogEntry(prefix + "_part_present", [this]() { return state_.part_present; });
   logger.addLogEntry(prefix + "_in_control_range", [this]() { return state_.in_control_range; });
   logger.addLogEntry(prefix + "_last_command_id", [this]() { return last_command_id_; });
+#endif
 }
 
 void Pump::removeFromLogger(mc_rtc::Logger & logger, const std::string & prefix)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   logger.removeLogEntry(prefix + "_status");
   logger.removeLogEntry(prefix + "_device_status");
   logger.removeLogEntry(prefix + "_actual_power");
@@ -59,10 +68,12 @@ void Pump::removeFromLogger(mc_rtc::Logger & logger, const std::string & prefix)
   logger.removeLogEntry(prefix + "_part_present");
   logger.removeLogEntry(prefix + "_in_control_range");
   logger.removeLogEntry(prefix + "_last_command_id");
+#endif
 }
 
 bool Pump::connect(const std::string & ip)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   if(gripper_)
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("{} is already connected", name_);
@@ -174,11 +185,13 @@ bool Pump::connect(const std::string & ip)
       }
     }
   });
+#endif
   return true;
 }
 
 void Pump::disconnect()
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   if(!gripper_)
   {
     return;
@@ -188,13 +201,16 @@ void Pump::disconnect()
   stateThread_.join();
   interruptThread_.join();
   gripper_.reset(nullptr);
+#endif
 }
 
+#ifndef MC_PANDA_WITHOUT_FRANKA
 const franka::VacuumGripperState & Pump::state() const
 {
   std::unique_lock<std::mutex> lock(stateMutex_);
   return state_;
 }
+#endif
 
 auto Pump::status() const -> Status
 {
@@ -219,6 +235,7 @@ const std::string & Pump::error() const
 
 bool Pump::vacuum(uint8_t vacuum, std::chrono::milliseconds timeout, ProductionSetupProfile profile)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   if(!gripper_)
   {
     return true;
@@ -231,11 +248,13 @@ bool Pump::vacuum(uint8_t vacuum, std::chrono::milliseconds timeout, ProductionS
   busy_ = true;
   command_ = {"vacuum", [=]() { return gripper_->vacuum(vacuum, timeout, profile); }};
   last_command_id_ = 1;
+#endif
   return true;
 }
 
 bool Pump::dropOff(std::chrono::milliseconds timeout)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   if(!gripper_)
   {
     return true;
@@ -248,11 +267,13 @@ bool Pump::dropOff(std::chrono::milliseconds timeout)
   busy_ = true;
   command_ = {"dropOff", [=]() { return gripper_->dropOff(timeout); }};
   last_command_id_ = 2;
+#endif
   return true;
 }
 
 bool Pump::stop()
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   if(!gripper_)
   {
     return true;
@@ -264,6 +285,7 @@ bool Pump::stop()
   }
   interrupted_ = true;
   last_command_id_ = 3;
+#endif
   return true;
 }
 

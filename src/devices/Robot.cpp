@@ -2,17 +2,21 @@
 
 #include <mc_rbdyn/Robot.h>
 
-#include <franka/exception.h>
+#ifndef MC_PANDA_WITHOUT_FRANKA
+#  include <franka/exception.h>
+#endif
 
 namespace mc_panda
 {
 
 Robot::~Robot()
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   if(robot_)
   {
     disconnect();
   }
+#endif
 }
 
 Robot * Robot::get(mc_rbdyn::Robot & robot)
@@ -26,17 +30,22 @@ Robot * Robot::get(mc_rbdyn::Robot & robot)
 
 mc_rbdyn::DevicePtr Robot::clone() const
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   if(robot_)
   {
     mc_rtc::log::error_and_throw<std::runtime_error>("Cannot clone a connected Robot");
   }
+#endif
   auto device = new Robot();
+#ifndef MC_PANDA_WITHOUT_FRANKA
   device->state_ = state_;
+#endif
   return mc_rbdyn::DevicePtr(device);
 }
 
 void Robot::addToLogger(mc_rtc::Logger & logger, const std::string & prefix)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   // External torque, filtered
   logger.addLogEntry(prefix + "_tau_ext_hat_filtered",
                      [this]() -> const std::array<double, 7> & { return state_.tau_ext_hat_filtered; });
@@ -76,10 +85,12 @@ void Robot::addToLogger(mc_rtc::Logger & logger, const std::string & prefix)
   logger.addLogEntry(prefix + "_m_ee", [this]() -> const double { return state_.m_ee; });
   logger.addLogEntry(prefix + "_m_load", [this]() -> const double { return state_.m_load; });
   // FIXME Previous version logged singular values which does not match anythin in franka::RobotState
+#endif
 }
 
 void Robot::removeFromLogger(mc_rtc::Logger & logger, const std::string & prefix)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   logger.removeLogEntry(prefix + "_tau_ext_hat_filtered");
   logger.removeLogEntry(prefix + "_O_F_ext_hat_K");
   logger.removeLogEntry(prefix + "_K_F_ext_hat_K");
@@ -98,10 +109,12 @@ void Robot::removeFromLogger(mc_rtc::Logger & logger, const std::string & prefix
   logger.removeLogEntry(prefix + "_motorvel");
   logger.removeLogEntry(prefix + "_m_ee");
   logger.removeLogEntry(prefix + "_m_load");
+#endif
 }
 
 void Robot::connect(franka::Robot * robot)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   std::unique_lock<std::mutex> lock(robotMutex_);
   if(robot_)
   {
@@ -143,10 +156,12 @@ void Robot::connect(franka::Robot * robot)
       commands_.pop();
     }
   });
+#endif
 }
 
 void Robot::disconnect()
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   if(!robot_)
   {
     return;
@@ -159,17 +174,20 @@ void Robot::disconnect()
   }
   commandCv_.notify_one();
   commandThread_.join();
+#endif
 }
 
 void Robot::setLoad(double load_mass,
                     const std::array<double, 3> & F_x_Cload,
                     const std::array<double, 9> & load_inertia)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   {
     std::unique_lock<std::mutex> lock(commandMutex_);
     commands_.emplace("setLoad", [=]() { robot_->setLoad(load_mass, F_x_Cload, load_inertia); });
   }
   commandCv_.notify_one();
+#endif
 }
 
 void Robot::setCollisionBehavior(const std::array<double, 7> & lower_torque_thresholds_acceleration,
@@ -181,6 +199,7 @@ void Robot::setCollisionBehavior(const std::array<double, 7> & lower_torque_thre
                                  const std::array<double, 6> & lower_force_thresholds_nominal,
                                  const std::array<double, 6> & upper_force_thresholds_nominal)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   {
     std::unique_lock<std::mutex> lock(commandMutex_);
     commands_.emplace("setCollisionBehavior", [=]() {
@@ -191,6 +210,7 @@ void Robot::setCollisionBehavior(const std::array<double, 7> & lower_torque_thre
     });
   }
   commandCv_.notify_one();
+#endif
 }
 
 void Robot::setCollisionBehavior(const std::array<double, 7> & lower_torque_thresholds,
@@ -198,6 +218,7 @@ void Robot::setCollisionBehavior(const std::array<double, 7> & lower_torque_thre
                                  const std::array<double, 6> & lower_force_thresholds,
                                  const std::array<double, 6> & upper_force_thresholds)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   {
     std::unique_lock<std::mutex> lock(commandMutex_);
     commands_.emplace("setCollisionBehavior", [=]() {
@@ -206,33 +227,40 @@ void Robot::setCollisionBehavior(const std::array<double, 7> & lower_torque_thre
     });
   }
   commandCv_.notify_one();
+#endif
 }
 
 void Robot::setJointImpedance(const std::array<double, 7> & K_theta)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   {
     std::unique_lock<std::mutex> lock(commandMutex_);
     commands_.emplace("setJointImpedance", [=]() { robot_->setJointImpedance(K_theta); });
   }
   commandCv_.notify_one();
+#endif
 }
 
 void Robot::setCartesianImpedance(const std::array<double, 6> & K_x)
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   {
     std::unique_lock<std::mutex> lock(commandMutex_);
     commands_.emplace("setCartesianImpedance", [=]() { robot_->setCartesianImpedance(K_x); });
   }
   commandCv_.notify_one();
+#endif
 }
 
 void Robot::stop()
 {
+#ifndef MC_PANDA_WITHOUT_FRANKA
   {
     std::unique_lock<std::mutex> lock(commandMutex_);
     commands_.emplace("stop", [=]() { robot_->stop(); });
   }
   commandCv_.notify_one();
+#endif
 }
 
 } // namespace mc_panda

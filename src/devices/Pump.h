@@ -7,8 +7,10 @@
 #include <mc_rtc/Configuration.h>
 #include <mc_rtc/log/Logger.h>
 
-#include <franka/vacuum_gripper.h>
-#include <franka/vacuum_gripper_state.h>
+#ifndef MC_PANDA_WITHOUT_FRANKA
+#  include <franka/vacuum_gripper.h>
+#  include <franka/vacuum_gripper_state.h>
+#endif
 
 #include <chrono>
 #include <thread>
@@ -23,18 +25,34 @@ struct MC_PANDA_DEVICES_DLLAPI Pump : public mc_rbdyn::Device
 {
   static constexpr auto name = "Pump";
 
+#ifndef MC_PANDA_WITHOUT_FRANKA
   using ProductionSetupProfile = franka::VacuumGripper::ProductionSetupProfile;
 
   using StatusInt = std::underlying_type<franka::VacuumGripperDeviceStatus>::type;
 
-  enum class Status : StatusInt
+  enum class Status : StatusInt{kGreen = static_cast<int>(franka::VacuumGripperDeviceStatus::kGreen),
+                                kYellow = static_cast<int>(franka::VacuumGripperDeviceStatus::kYellow),
+                                kOrange = static_cast<int>(franka::VacuumGripperDeviceStatus::kOrange),
+                                kRed = static_cast<int>(franka::VacuumGripperDeviceStatus::kRed),
+                                disconnected = static_cast<int>(kRed + 1)};
+#else
+  enum class ProductionSetupProfile : uint8_t
   {
-    kGreen = static_cast<int>(franka::VacuumGripperDeviceStatus::kGreen),
-    kYellow = static_cast<int>(franka::VacuumGripperDeviceStatus::kYellow),
-    kOrange = static_cast<int>(franka::VacuumGripperDeviceStatus::kOrange),
-    kRed = static_cast<int>(franka::VacuumGripperDeviceStatus::kRed),
-    disconnected = static_cast<int>(kRed + 1)
+    kP0,
+    kP1,
+    kP2,
+    kP3
   };
+
+  enum class Status : uint8_t
+  {
+    kGreen,
+    kYellow,
+    kOrange,
+    kRed,
+    disconnected = static_cast<uint8_t>(kRed + 1)
+  };
+#endif
 
   /** Get the pump associated to the provided robot
    *
@@ -57,8 +75,10 @@ struct MC_PANDA_DEVICES_DLLAPI Pump : public mc_rbdyn::Device
   /** Disconnect from the actual pump */
   void disconnect();
 
+#ifndef MC_PANDA_WITHOUT_FRANKA
   /** Access the vacuum gripper state */
   const franka::VacuumGripperState & state() const;
+#endif
 
   /** Get the pump status */
   Status status() const;
@@ -110,14 +130,18 @@ struct MC_PANDA_DEVICES_DLLAPI Pump : public mc_rbdyn::Device
 private:
   // Status of the pump
   Status status_ = Status::disconnected;
+#ifndef MC_PANDA_WITHOUT_FRANKA
   // Only non-null if the pump is connected
   std::unique_ptr<franka::VacuumGripper> gripper_;
+#endif
   // Thread for reading the gripper state
   std::thread stateThread_;
   // Mutex for protecting the gripper state
   mutable std::mutex stateMutex_;
+#ifndef MC_PANDA_WITHOUT_FRANKA
   // Current state
   franka::VacuumGripperState state_;
+#endif
   // Thread for sending commands
   std::thread commandThread_;
   // Thread for interrupting commands
@@ -147,6 +171,7 @@ typedef std::vector<Pump, Eigen::aligned_allocator<Pump>> PumpVector;
 
 } // namespace mc_panda
 
+#ifndef MC_PANDA_WITHOUT_FRANKA
 static_assert(std::is_same<typename std::underlying_type<mc_panda::Pump::Status>::type,
                            typename std::underlying_type<franka::VacuumGripperDeviceStatus>::type>::value,
               "Something is wrong");
@@ -170,6 +195,7 @@ inline bool operator!=(const franka::VacuumGripperDeviceStatus & lhs, const mc_p
 {
   return rhs != lhs;
 }
+#endif
 
 namespace mc_rtc
 {

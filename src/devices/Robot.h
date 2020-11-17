@@ -6,7 +6,14 @@
 
 #include <mc_rtc/log/Logger.h>
 
-#include <franka/robot.h>
+#ifndef MC_PANDA_WITHOUT_FRANKA
+#  include <franka/robot.h>
+#else
+namespace franka
+{
+struct Robot;
+}
+#endif
 
 #include <condition_variable>
 #include <queue>
@@ -50,7 +57,11 @@ struct MC_PANDA_DEVICES_DLLAPI Robot : public mc_rbdyn::Device
 
   inline bool connected() const noexcept
   {
+#ifndef MC_PANDA_WITHOUT_FRANKA
     return robot_ != nullptr;
+#else
+    return false;
+#endif
   }
 
   /** Set the robot instance and start a command thread */
@@ -59,6 +70,7 @@ struct MC_PANDA_DEVICES_DLLAPI Robot : public mc_rbdyn::Device
   /** Interrupt the connection to the robot */
   void disconnect();
 
+#ifndef MC_PANDA_WITHOUT_FRANKA
   /** Set the current state */
   inline void state(const franka::RobotState & s) noexcept
   {
@@ -70,6 +82,7 @@ struct MC_PANDA_DEVICES_DLLAPI Robot : public mc_rbdyn::Device
   {
     return state_;
   }
+#endif
 
   /** Log the state information that is not passed to mc_rtc */
   void addToLogger(mc_rtc::Logger & logger, const std::string & prefix);
@@ -125,8 +138,10 @@ private:
   std::queue<Command> commands_;
 
   std::mutex robotMutex_;
+#ifndef MC_PANDA_WITHOUT_FRANKA
   franka::Robot * robot_ = nullptr;
   franka::RobotState state_;
+#endif
 };
 
 } // namespace mc_panda
