@@ -16,6 +16,8 @@ public:
 
 } // namespace mc_robots
 
+#ifndef MC_RTC_BUILD_STATIC
+
 extern "C"
 {
   ROBOT_MODULE_API void MC_RTC_ROBOT_MODULE(std::vector<std::string> & names)
@@ -52,3 +54,23 @@ extern "C"
     }
   }
 }
+
+#else
+
+#  include <mc_rbdyn/RobotLoader.h>
+
+namespace
+{
+static auto registered = []() {
+  using TYPE = mc_robots::PandaRobotModule;
+  using fn_t = std::function<TYPE *()>;
+  mc_rbdyn::RobotLoader::register_object("Panda", fn_t([]() { return new TYPE(false, false, false); }));
+  mc_rbdyn::RobotLoader::register_object("PandaDefault", fn_t([]() { return new TYPE(false, false, false); }));
+  mc_rbdyn::RobotLoader::register_object("PandaPump", fn_t([]() { return new TYPE(true, false, false); }));
+  mc_rbdyn::RobotLoader::register_object("PandaFoot", fn_t([]() { return new TYPE(false, true, false); }));
+  mc_rbdyn::RobotLoader::register_object("PandaHand", fn_t([]() { return new TYPE(false, false, true); }));
+  return true;
+}();
+}
+
+#endif

@@ -1,4 +1,7 @@
-find_program(XACRO xacro)
+find_package(xacro)
+if(xacro_FOUND)
+  find_program(XACRO xacro)
+endif()
 
 find_package(choreonoid QUIET)
 if(choreonoid_FOUND)
@@ -10,8 +13,11 @@ if(choreonoid_FOUND)
   install(DIRECTORY model/panda/ DESTINATION ${MODEL_DESTINATION} FILES_MATCHING PATTERN "*.wrl")
 endif()
 
-set(PANDA_DESCRIPTION_PATH "${CMAKE_INSTALL_PREFIX}/share/mc_panda")
-set(URDF_DESTINATION "${PANDA_DESCRIPTION_PATH}/")
+set(MC_PANDA_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/share/mc_panda")
+if(NOT DEFINED PANDA_DESCRIPTION_PATH)
+  set(PANDA_DESCRIPTION_PATH "${MC_PANDA_INSTALL_PATH}")
+endif()
+set(URDF_DESTINATION "${MC_PANDA_INSTALL_PATH}/")
 set(CONVEX_DESTINATION "${URDF_DESTINATION}/convex")
 set(MESHES_DESTINATION "${URDF_DESTINATION}/meshes")
 

@@ -1,6 +1,10 @@
 macro(add_panda_fsm_state NAME)
   add_fsm_state_simple(${NAME})
-  target_link_libraries(${NAME} PUBLIC mc_panda::devices)
+  if(MC_RTC_BUILD_STATIC)
+    target_link_libraries(mc_control_fsm PUBLIC mc_panda::devices)
+  else()
+    target_link_libraries(${NAME} PUBLIC mc_panda::devices)
+  endif()
 endmacro()
 
 if(MC_PANDA_WITH_FRANKA)

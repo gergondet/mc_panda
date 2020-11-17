@@ -2,7 +2,7 @@
 #include "devices/Pump.h"
 #include "devices/Robot.h"
 
-#include "config.h"
+#include "mc_panda/config.h"
 
 #ifndef M_PI
 #  include <boost/math/constants/constants.hpp>

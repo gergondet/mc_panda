@@ -1,5 +1,7 @@
 @PACKAGE_INIT@
 
+set(MC_PANDA_INSTALL_PREFIX "${PACKAGE_PREFIX_DIR}")
+
 include(CMakeFindDependencyMacro)
 find_package(mc_rtc 1.4.0 REQUIRED)
 set(MC_PANDA_WITH_FRANKA @MC_PANDA_WITH_FRANKA@)
@@ -7,5 +9,7 @@ if(@MC_PANDA_WITH_FRANKA@)
   find_package(Franka REQUIRED)
 endif()
 
-include("${CMAKE_CURRENT_LIST_DIR}/mc_pandaTargets.cmake")
-check_required_components(mc_panda)
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/mc_pandaTargets.cmake")
+  include("${CMAKE_CURRENT_LIST_DIR}/mc_pandaTargets.cmake")
+  check_required_components(mc_panda)
+endif()
