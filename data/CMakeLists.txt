@@ -1,5 +1,4 @@
-find_package(xacro)
-if(xacro_FOUND)
+if(NOT MC_PANDA_DISABLE_XACRO)
   find_program(XACRO xacro)
 endif()
 

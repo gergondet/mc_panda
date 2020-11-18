@@ -10,6 +10,7 @@ enable_testing()
 set(CMAKE_CXX_STANDARD 11)
 
 option(MC_PANDA_WITH_FRANKA "Build mc_panda with libfranka integration" ON)
+option(MC_PANDA_DISABLE_XACRO "Force mc_panda not to use xacro" OFF)
 
 if(MC_PANDA_WITH_FRANKA)
   find_package(Franka REQUIRED)
